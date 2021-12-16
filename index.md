@@ -24,7 +24,7 @@ output:
 | 2021.11.08 | нахско-дагестанские языки, linux, lexd |                                                                                            | [видео](https://youtu.be/oslfxrYjt_A) |
 | 2021.12.02 | linux, lexd, github, makefiles         | [материалы](https://agricolamz.github.io/2021.12.02_intro_to_linux_lexd_github_makefiles/) | [видео](https://youtu.be/3ULre3nuIhU) |
 | 2021.12.09 | gitignore, tests, githooks             | [материалы](https://agricolamz.github.io/2021.12.09_gitignore_tests_githooks/)             | [видео](https://youtu.be/8v6ajrlOGuA) |
-| 2021.12.16 | `twol`, транслитерация видео           | [материалы](https://agricolamz.github.io/2021.12.16_twol_transliteration/)                 |                                       |
+| 2021.12.16 | `twol`, транслитерация видео           | [материалы](https://agricolamz.github.io/2021.12.16_twol_transliteration/)                 | [видео](https://youtu.be/Uvgxv564U5A) |
 
 # `twol`[^1]
 
@@ -45,7 +45,7 @@ output:
 
 ## Первый пример
 
-В андийском есть коммитатив -лой, который ассимилируется, если основа заканчивается на *н*. Вот мой `and.lexd`:
+В андийском есть комитатив -лой, который ассимилируется, если основа заканчивается на *н*. Вот мой `and.lexd`:
 
 
 ```
@@ -604,10 +604,10 @@ Using HFST basic transducer format and performing slow lookups
 * перегенерация
 
 ```
-берка<n><obl><sub><essive><elative>:berkutɬikku
-берка<n><obl><sub><essive><elative>:berkutɬikːu
+берка<n><obl><sub><elative>:berkutɬikku
+берка<n><obl><sub><elative>:berkutɬikːu
 ```
 
 * учет контекста
 
-В некоторых орфографиях графема обозначает одно в одном контексте и другое в другом (например /ё/ в ***ё**ж* и *Л**ё**ва*). Хотелось бы, чтобы этот контест можно было бы прописывать без использования `twolc` :)
+В некоторых орфографиях графема обозначает одно в одном контексте и другое в другом (например /ё/ в ***ё**ж* и *Л**ё**ва*). Хотелось бы, чтобы этот контест можно было бы прописывать без использования `twol` :)

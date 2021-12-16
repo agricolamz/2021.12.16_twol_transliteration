@@ -283,7 +283,7 @@ div.tocify {
 <td>2021.12.16</td>
 <td><code>twol</code>, транслитерация видео</td>
 <td><a href="https://agricolamz.github.io/2021.12.16_twol_transliteration/">материалы</a></td>
-<td></td>
+<td><a href="https://youtu.be/Uvgxv564U5A">видео</a></td>
 </tr>
 </tbody>
 </table>
@@ -304,7 +304,7 @@ div.tocify {
 <p>Важно понимать, что фонологические правила в <code>twol</code> не правила в стиле генеративной фонологии. Правила в <code>twol</code> не упорядочены, а применяются все сразу.</p>
 <div id="первый-пример" class="section level2" number="2.1">
 <h2 number="2.1"><span class="header-section-number">2.1</span> Первый пример</h2>
-<p>В андийском есть коммитатив -лой, который ассимилируется, если основа заканчивается на <em>н</em>. Вот мой <code>and.lexd</code>:</p>
+<p>В андийском есть комитатив -лой, который ассимилируется, если основа заканчивается на <em>н</em>. Вот мой <code>and.lexd</code>:</p>
 <pre><code>PATTERNS
 NounAbs [&lt;n&gt;:] Abs (Com)
 NounObl [&lt;n&gt;:] [&lt;obl&gt;:] (NounInfl) | (NounInflEssive Elative?)
@@ -675,12 +675,12 @@ Using HFST basic transducer format and performing slow lookups
 <ul>
 <li>перегенерация</li>
 </ul>
-<pre><code>берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:berkutɬikku
-берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:berkutɬikːu</code></pre>
+<pre><code>берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;:berkutɬikku
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;:berkutɬikːu</code></pre>
 <ul>
 <li>учет контекста</li>
 </ul>
-<p>В некоторых орфографиях графема обозначает одно в одном контексте и другое в другом (например /ё/ в <em><strong>ё</strong>ж</em> и <em>Л<strong>ё</strong>ва</em>). Хотелось бы, чтобы этот контест можно было бы прописывать без использования <code>twolc</code> :)</p>
+<p>В некоторых орфографиях графема обозначает одно в одном контексте и другое в другом (например /ё/ в <em><strong>ё</strong>ж</em> и <em>Л<strong>ё</strong>ва</em>). Хотелось бы, чтобы этот контест можно было бы прописывать без использования <code>twol</code> :)</p>
 </div>
 </div>
 <div class="footnotes">
