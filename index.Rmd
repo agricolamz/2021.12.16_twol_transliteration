@@ -1,0 +1,202 @@
+---
+title: "транслитерация, `twol`"
+author: "Г. Мороз, Н. Хауэлл"
+date: "16 декабря 2021"
+output: 
+  html_document:
+    toc: true
+    toc_position: right
+    toc_depth: 2
+    toc_float: yes
+    number_sections: true
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library('knitr')
+knit_hooks$set(prompt = function(before, options, envir) {options(prompt = "$ ")})
+opts_chunk$set(comment = "", prompt = TRUE)
+```
+
+```{bash, include=FALSE}
+make clean
+```
+
+# Прошлые встречи
+
+* 2021.11.08, [видео](https://youtu.be/oslfxrYjt_A)
+* 2021.12.02, [видео](https://youtu.be/3ULre3nuIhU), [материалы](https://agricolamz.github.io/2021.12.02_intro_to_linux_lexd_github_makefiles/)
+* 2021.12.09, [видео](https://youtu.be/8v6ajrlOGuA), [материалы](https://agricolamz.github.io/2021.12.09_gitignore_tests_githooks/)
+
+# `twol`[^1]
+
+[^1]: Весь этот раздел я бездумно списал из прошлогодних материалов Ника Хауэлла. Я старался списывать только то, что я понял...
+
+`twol` --- это 
+
+* формализм для описания морфонологии;
+* язык программирования для описания морфонологических правил;
+- `twolc` --- компилятор этого языка.
+
+`twol` состоит из 
+- 'алфавита' --- список возможных трансформаций;
+- 'правила' --- список двухуровневых правил.
+
+
+
+# Транслитерация
+
+Как и в любой правиловой транслитерации нам нужен файл соответствий (`correspondence`):
+
+```
+a:а
+b:б
+d:д
+e:е
+i:и
+k:к
+kː:кк
+tɬ:лI
+o:о
+r:р
+u:у
+qχ:хъ
+ʔ:ъ
+```
+
+Мы его можем превратить в трансдьюссер `correspondence.hfst`:
+
+```{bash}
+sed 's/$$/  1/g' correspondence | hfst-strings2fst -j -o correspondence.hfst
+```
+
+Пока мы можем его посмотреть, но он не отличается от нашего файла:
+
+```{bash}
+hfst-fst2strings correspondence.hfst
+```
+
+Мы можем даже его применить, но только к символам из нашей таблицы соответствий:
+
+```{bash}
+echo "b" | hfst-lookup correspondence.hfst
+```
+
+```{bash}
+echo "tɬ" | hfst-lookup correspondence.hfst
+```
+
+Т. е. текст он пока не транслитерирует:
+```{bash}
+echo "berka" | hfst-lookup correspondence.hfst
+```
+
+Чтобы построить транслитератор, нам нужно, чтобы наш трансдьюсер, применяя список соответствий, зациклился:
+
+```{bash}
+sed 's/$$/	1/g' correspondence | hfst-strings2fst -j | hfst-repeat | hfst-concatenate correspondence.hfst - -o la2cy.transliterater.hfst
+```
+
+Теперь мы построили транслитератор `la2cy.transliterater.hfst`:
+
+```{bash}
+echo "berkutɬi" | hfst-lookup la2cy.transliterater.hfst
+```
+
+## Объединение с морфологическими анализаторами
+
+Как и в случае с парой анализатор-генератор, мы можем инвертировать наш транслитератор, чтобы получить транслитератор, который транслитерирует из кириллицы в латиницу:
+
+```{bash}
+hfst-invert la2cy.transliterater.hfst -o cy2la.transliterater.hfst
+```
+
+```{bash}
+echo "беркулIи" | hfst-lookup cy2la.transliterater.hfst
+```
+
+Если в прошлые разы мы строили морфологические анализаторы, которые работали с кириллицей, то теперь мы можем соединить их с нашими транслитераторами:
+
+```{bash, include = FALSE}
+make
+```
+
+```{bash}
+hfst-compose and.generator.hfst cy2la.transliterater.hfst -o and.generator.tr.hfst
+```
+
+Что получилось:
+```{bash}
+hfst-fst2strings and.generator.tr.hfst
+```
+
+Можем перевернуть и сделать анализатор:
+
+```{bash}
+hfst-invert and.generator.tr.hfst -o and.analizer.tr.hfst
+```
+
+Результат:
+```{bash}
+hfst-fst2strings and.analizer.tr.hfst
+```
+
+Теперь можно суммировать все это в одном `Makefile`:
+
+```
+.DEFAULT_GOAL := and.analizer.hfst
+
+# generate analizer and generator
+and.analizer.hfst: and.generator.hfst
+	hfst-invert $< -o $@
+and.generator.hfst: and.lexd
+	lexd $< | hfst-txt2fst -o $@
+
+# generate transliteraters
+cy2la.transliterater.hfst: la2cy.transliterater.hfst
+	hfst-invert $< -o $@
+la2cy.transliterater.hfst: correspondence correspondence.hfst
+	sed 's/$$/	1/g' $< | hfst-strings2fst -j | hfst-repeat | hfst-concatenate correspondence.hfst - -o $@
+correspondence.hfst: correspondence
+	sed 's/$$/	1/g' $< | hfst-strings2fst -j -o $@
+
+# generate analizer and generator for transcription
+and.analizer.tr.hfst: and.generator.tr.hfst
+	hfst-invert $< -o $@
+and.generator.tr.hfst: and.generator.hfst cy2la.transliterater.hfst
+	hfst-compose $^ -o $@
+
+# creat and apply tests
+test.pass.txt: tests.csv
+	awk -F, '$$3 == "pass" {print $$1 ":" $$2}' $^ | sort -u > $@
+check: and.generator.hfst test.pass.txt
+	bash compare.sh $< test.pass.txt
+
+# cleans files created during the check
+test.clean: check
+	rm test.*
+
+# remove all hfst files
+clean:
+	rm *.hfst
+```
+
+## Сложности
+
+Пока мне придумалось лишь несколько сложностей (вполне преодолимых, как мне кажется):
+
+* при введение инородного символа все ломается (хотелось бы, чтобы появлялся какой-то символ обозначающий поломку):
+
+```{bash}
+echo "бяркулIи" | hfst-lookup cy2la.transliterater.hfst
+```
+
+* case sensitivity
+
+```{bash}
+echo "БЕркулIи" | hfst-lookup cy2la.transliterater.hfst
+```
+
+* учет контекста
+
+В некоторых орфографиях графема обозначает одно в одном контексте и другое в другом (например /ё/ в ***ё**ж* и *Л**ё**ва*). Хотелось бы, чтобы этот контест можно было бы прописывать.
