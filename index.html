@@ -301,6 +301,128 @@ div.tocify {
 <li>‘алфавита’ — список возможных трансформаций;</li>
 <li>‘правила’ — список двухуровневых правил.</li>
 </ul>
+<p>Важно понимать, что фонологические правила в <code>twol</code> не правила в стиле генеративной фонологии. Правила в <code>twol</code> не упорядочены, а применяются все сразу.</p>
+<div id="первый-пример" class="section level2" number="2.1">
+<h2 number="2.1"><span class="header-section-number">2.1</span> Первый пример</h2>
+<p>В андийском есть коммитатив -лой, который ассимилируется, если основа заканчивается на <em>н</em>. Вот мой <code>and.lexd</code>:</p>
+<pre><code>PATTERNS
+NounAbs [&lt;n&gt;:] Abs (Com)
+NounObl [&lt;n&gt;:] [&lt;obl&gt;:] (NounInfl) | (NounInflEssive Elative?)
+
+LEXICON NounAbs
+берка # змея
+цIцIон # соль
+
+LEXICON NounObl
+берка:берку # змея
+цIцIон:цIцIон # соль
+
+LEXICON Abs
+&lt;abs&gt;:
+
+LEXICON NounInfl
+&lt;erg&gt;:ди
+&lt;ins&gt;:хъи
+&lt;sub&gt;&lt;lative&gt;:лIи
+&lt;super&gt;&lt;lative&gt;:ъо
+
+LEXICON NounInflEssive
+&lt;super&gt;&lt;essive&gt;:ъа
+&lt;sub&gt;&lt;essive&gt;:лIи
+
+LEXICON Elative
+&lt;elative&gt;:кку
+
+LEXICON Com
+&lt;com&gt;:{л}ой</code></pre>
+<p>Я хочу написать, правило <code>л -&gt; н / н _</code>. Так как это правило должно применяться не всегда, а только в показателе коммитатива, я ввожу специальную абстракцию <code>{л}</code> (ее принято называть <em>архифонемой</em>, но лучше не думать над лингвистическим употреблением этого термина), реализацию которой я пропишу в правилах <code>and.twol</code>.</p>
+<pre><code>Alphabet
+  а б д е и й к л н о х ъ р ц I у ъ
+  %{л%}:н %{л%}:л
+;
+
+Rules
+
+&quot;{л} realisation&quot;
+%{л%}:н &lt;=&gt; н _ ;</code></pre>
+<p>Теперь можно сделать из этого файла трансдьюcер:</p>
+<pre class="bash"><code>$ hfst-twolc and.twol -o and.twol.hfst</code></pre>
+<pre><code>Reading input from and.twol.
+Writing output to and.twol.hfst.
+Reading alphabet.
+Reading rules and compiling their contexts and centers.
+Compiling rules.
+Storing rules.</code></pre>
+<p>На него нельзя поглядеть при помощи <code>hfst-fst2strings</code>, потому что он зациклен. Теперь нужно сделать трансдьюсер из файла <code>.lexd</code>:</p>
+<pre class="bash"><code>$ lexd and.lexd | hfst-txt2fst -o and.lexd.hfst</code></pre>
+<p>Давайте поглядим на результат:</p>
+<pre class="bash"><code>$ hfst-fst2strings and.lexd.hfst</code></pre>
+<pre><code>берка&lt;n&gt;&lt;abs&gt;&lt;com&gt;:берка{л}ой
+берка&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:беркуди
+берка&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:беркухъи
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:беркулIи
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:беркулIи
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:беркулIикку
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:беркуъо
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:беркуъа
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:беркуъакку
+цIцIон&lt;n&gt;&lt;abs&gt;&lt;com&gt;:цIцIон{л}ой
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:цIцIонди
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:цIцIонхъи
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:цIцIонлIи
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:цIцIонлIи
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:цIцIонлIикку
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:цIцIонъо
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:цIцIонъа
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:цIцIонъакку</code></pre>
+<p>Теперь давайте соединим наши трансдьюсеры и посмотрим, что получилось:</p>
+<pre class="bash"><code>$ hfst-compose-intersect and.lexd.hfst and.twol.hfst -o and.generator.hfst</code></pre>
+<pre class="bash"><code>$ hfst-fst2strings and.generator.hfst</code></pre>
+<pre><code>берка&lt;n&gt;&lt;abs&gt;&lt;com&gt;:беркалой
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:беркулIи
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:беркулIикку
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:беркулIи
+берка&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:беркуди
+берка&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:беркухъи
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:беркуъакку
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:беркуъа
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:беркуъо
+цIцIон&lt;n&gt;&lt;abs&gt;&lt;com&gt;:цIцIонной
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:цIцIонлIи
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:цIцIонлIикку
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:цIцIонлIи
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:цIцIонди
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:цIцIонхъи
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:цIцIонъакку
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:цIцIонъа
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:цIцIонъо</code></pre>
+<pre class="bash"><code>$ sed -n -e 1,12p -e 27,39p Makefile</code></pre>
+<pre><code>.DEFAULT_GOAL := and.analizer.hfst
+
+# generate analizer and generator
+and.analizer.hfst: and.generator.hfst
+    hfst-invert $&lt; -o $@
+and.generator.hfst: and.lexd.hfst and.twol.hfst
+    hfst-compose-intersect $^ -o $@
+and.lexd.hfst: and.lexd
+    lexd $&lt; | hfst-txt2fst -o $@
+and.twol.hfst: and.twol
+    hfst-twolc $&lt; -o $@
+
+# creat and apply tests
+test.pass.txt: tests.csv
+    awk -F, &#39;$$3 == &quot;pass&quot; {print $$1 &quot;:&quot; $$2}&#39; $^ | sort -u &gt; $@
+check: and.generator.hfst test.pass.txt
+    bash compare.sh $&lt; test.pass.txt
+
+# cleans files created during the check
+test.clean: check
+    rm test.*
+
+# remove all hfst files
+clean:
+    rm *.hfst</code></pre>
+</div>
 </div>
 <div id="транслитерация" class="section level1" number="3">
 <h1 number="3"><span class="header-section-number">3</span> Транслитерация</h1>
@@ -310,13 +432,17 @@ b:б
 d:д
 e:е
 i:и
+j:й
 k:к
 kː:кк
-tɬ:лI
+l:л
+n:н
 o:о
-r:р
-u:у
 qχ:хъ
+r:р
+tɬ:лI
+tsː:цIцI
+u:у
 ʔ:ъ</code></pre>
 <p>Мы его можем превратить в трансдьюссер <code>correspondence.hfst</code>:</p>
 <pre class="bash"><code>$ sed &#39;s/$$/  1/g&#39; correspondence | hfst-strings2fst -j -o correspondence.hfst</code></pre>
@@ -327,13 +453,17 @@ b:б
 d:д
 e:е
 i:и
+j:й
 k:к
 kː:кк
-tɬ:лI
+l:л
+n:н
 o:о
-r:р
-u:у
 qχ:хъ
+r:р
+tɬ:лI
+tsː:цIцI
+u:у
 ʔ:ъ</code></pre>
 <p>Мы можем даже его применить, но только к символам из нашей таблицы соответствий:</p>
 <pre class="bash"><code>$ echo &quot;b&quot; | hfst-lookup correspondence.hfst</code></pre>
@@ -378,40 +508,66 @@ Using HFST basic transducer format and performing slow lookups
 <pre class="bash"><code>$ hfst-compose and.generator.hfst cy2la.transliterater.hfst -o and.generator.tr.hfst</code></pre>
 <p>Что получилось:</p>
 <pre class="bash"><code>$ hfst-fst2strings and.generator.tr.hfst</code></pre>
-<pre><code>берка&lt;n&gt;&lt;abs&gt;:berka
-берка&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:berkudi
-берка&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:berkuqχi
+<pre><code>берка&lt;n&gt;&lt;abs&gt;&lt;com&gt;:berkaloj
 берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:berkutɬi
 берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:berkutɬi
 берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:berkutɬikku
 берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:berkutɬikːu
+берка&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:berkudi
+берка&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:berkuqχi
 берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:berkuʔa
 берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:berkuʔakku
 берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:berkuʔakːu
-берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:berkuʔo</code></pre>
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:berkuʔo
+цIцIон&lt;n&gt;&lt;abs&gt;&lt;com&gt;:tsːonnoj
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:tsːontɬi
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:tsːontɬi
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:tsːontɬikku
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:tsːontɬikːu
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:tsːondi
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:tsːonqχi
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:tsːonʔa
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:tsːonʔakku
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:tsːonʔakːu
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:tsːonʔo</code></pre>
 <p>Можем перевернуть и сделать анализатор:</p>
 <pre class="bash"><code>$ hfst-invert and.generator.tr.hfst -o and.analizer.tr.hfst</code></pre>
 <p>Результат:</p>
 <pre class="bash"><code>$ hfst-fst2strings and.analizer.tr.hfst</code></pre>
-<pre><code>berka:берка&lt;n&gt;&lt;abs&gt;
-berkudi:берка&lt;n&gt;&lt;obl&gt;&lt;erg&gt;
-berkuqχi:берка&lt;n&gt;&lt;obl&gt;&lt;ins&gt;
+<pre><code>berkaloj:берка&lt;n&gt;&lt;abs&gt;&lt;com&gt;
 berkutɬi:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;
 berkutɬi:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;
 berkutɬikku:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;
 berkutɬikːu:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;
+berkudi:берка&lt;n&gt;&lt;obl&gt;&lt;erg&gt;
+berkuqχi:берка&lt;n&gt;&lt;obl&gt;&lt;ins&gt;
 berkuʔa:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;
 berkuʔakku:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;
 berkuʔakːu:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;
-berkuʔo:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;</code></pre>
+berkuʔo:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;
+tsːonnoj:цIцIон&lt;n&gt;&lt;abs&gt;&lt;com&gt;
+tsːontɬi:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;
+tsːontɬi:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;
+tsːontɬikku:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;
+tsːontɬikːu:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;
+tsːondi:цIцIон&lt;n&gt;&lt;obl&gt;&lt;erg&gt;
+tsːonqχi:цIцIон&lt;n&gt;&lt;obl&gt;&lt;ins&gt;
+tsːonʔa:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;
+tsːonʔakku:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;
+tsːonʔakːu:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;
+tsːonʔo:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;</code></pre>
 <p>Теперь можно суммировать все это в одном <code>Makefile</code>:</p>
 <pre><code>.DEFAULT_GOAL := and.analizer.hfst
 
 # generate analizer and generator
 and.analizer.hfst: and.generator.hfst
     hfst-invert $&lt; -o $@
-and.generator.hfst: and.lexd
+and.generator.hfst: and.lexd.hfst and.twol.hfst
+    hfst-compose-intersect $^ -o $@
+and.lexd.hfst: and.lexd
     lexd $&lt; | hfst-txt2fst -o $@
+and.twol.hfst: and.twol
+    hfst-twolc $&lt; -o $@
 
 # generate transliteraters
 cy2la.transliterater.hfst: la2cy.transliterater.hfst
@@ -462,6 +618,11 @@ Using HFST basic transducer format and performing slow lookups
 &gt; БЕркулIи  БЕркулIи+?  inf
 
 &gt; </code></pre>
+<ul>
+<li>перегенерация</li>
+</ul>
+<pre><code>берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:berkutɬikku
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:berkutɬikːu</code></pre>
 <ul>
 <li>учет контекста</li>
 </ul>

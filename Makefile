@@ -3,8 +3,12 @@
 # generate analizer and generator
 and.analizer.hfst: and.generator.hfst
 	hfst-invert $< -o $@
-and.generator.hfst: and.lexd
+and.generator.hfst: and.lexd.hfst and.twol.hfst
+	hfst-compose-intersect $^ -o $@
+and.lexd.hfst: and.lexd
 	lexd $< | hfst-txt2fst -o $@
+and.twol.hfst: and.twol
+	hfst-twolc $< -o $@
 
 # generate transliteraters
 cy2la.transliterater.hfst: la2cy.transliterater.hfst

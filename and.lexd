@@ -1,12 +1,14 @@
 PATTERNS
-NounAbs [<n>:] Abs
+NounAbs [<n>:] Abs (Com)
 NounObl [<n>:] [<obl>:] (NounInfl) | (NounInflEssive Elative?)
 
 LEXICON NounAbs
 берка # змея
+цIцIон # соль
 
 LEXICON NounObl
 берка:берку # змея
+цIцIон:цIцIон # соль
 
 LEXICON Abs
 <abs>:
@@ -23,3 +25,6 @@ LEXICON NounInflEssive
 
 LEXICON Elative
 <elative>:кку
+
+LEXICON Com
+<com>:{л}ой

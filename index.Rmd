@@ -46,26 +46,59 @@ make clean
 * 'алфавита' --- список возможных трансформаций;
 * 'правила' --- список двухуровневых правил.
 
+Важно понимать, что фонологические правила в `twol` не правила в стиле генеративной фонологии. Правила в `twol` не упорядочены, а применяются все сразу.
 
+## Первый пример
+
+В андийском есть коммитатив -лой, который ассимилируется, если основа заканчивается на *н*. Вот мой `and.lexd`:
+
+```{bash, echo = FALSE}
+cat and.lexd
+```
+
+
+Я хочу написать, правило `л -> н / н _`. Так как это правило должно применяться не всегда, а только в показателе коммитатива, я ввожу специальную абстракцию `{л}` (ее принято называть *архифонемой*, но лучше не думать над лингвистическим употреблением этого термина), реализацию которой я пропишу в правилах `and.twol`.
+
+```{bash, echo = FALSE}
+cat and.twol
+```
+
+Теперь можно сделать из этого файла трансдьюcер:
+
+```{bash}
+hfst-twolc and.twol -o and.twol.hfst
+```
+
+На него нельзя поглядеть при помощи `hfst-fst2strings`, потому что он зациклен. Теперь нужно сделать трансдьюсер из файла `.lexd`:
+
+```{bash}
+lexd and.lexd | hfst-txt2fst -o and.lexd.hfst
+```
+
+Давайте поглядим на результат:
+```{bash}
+hfst-fst2strings and.lexd.hfst
+```
+
+Теперь давайте соединим наши трансдьюсеры и посмотрим, что получилось:
+```{bash}
+hfst-compose-intersect and.lexd.hfst and.twol.hfst -o and.generator.hfst
+```
+
+```{bash}
+hfst-fst2strings and.generator.hfst
+```
+
+```{bash}
+sed -n -e 1,12p -e 27,39p Makefile
+```
 
 # Транслитерация
 
 Как и в любой правиловой транслитерации нам нужен файл соответствий (`correspondence`):
 
-```
-a:а
-b:б
-d:д
-e:е
-i:и
-k:к
-kː:кк
-tɬ:лI
-o:о
-r:р
-u:у
-qχ:хъ
-ʔ:ъ
+```{bash, echo = FALSE}
+cat correspondence
 ```
 
 Мы его можем превратить в трансдьюссер `correspondence.hfst`:
@@ -147,43 +180,10 @@ hfst-fst2strings and.analizer.tr.hfst
 
 Теперь можно суммировать все это в одном `Makefile`:
 
+```{bash, echo = FALSE}
+cat Makefile
 ```
-.DEFAULT_GOAL := and.analizer.hfst
 
-# generate analizer and generator
-and.analizer.hfst: and.generator.hfst
-	hfst-invert $< -o $@
-and.generator.hfst: and.lexd
-	lexd $< | hfst-txt2fst -o $@
-
-# generate transliteraters
-cy2la.transliterater.hfst: la2cy.transliterater.hfst
-	hfst-invert $< -o $@
-la2cy.transliterater.hfst: correspondence correspondence.hfst
-	sed 's/$$/	1/g' $< | hfst-strings2fst -j | hfst-repeat | hfst-concatenate correspondence.hfst - -o $@
-correspondence.hfst: correspondence
-	sed 's/$$/	1/g' $< | hfst-strings2fst -j -o $@
-
-# generate analizer and generator for transcription
-and.analizer.tr.hfst: and.generator.tr.hfst
-	hfst-invert $< -o $@
-and.generator.tr.hfst: and.generator.hfst cy2la.transliterater.hfst
-	hfst-compose $^ -o $@
-
-# creat and apply tests
-test.pass.txt: tests.csv
-	awk -F, '$$3 == "pass" {print $$1 ":" $$2}' $^ | sort -u > $@
-check: and.generator.hfst test.pass.txt
-	bash compare.sh $< test.pass.txt
-
-# cleans files created during the check
-test.clean: check
-	rm test.*
-
-# remove all hfst files
-clean:
-	rm *.hfst
-```
 
 ## Сложности
 
@@ -200,6 +200,15 @@ echo "бяркулIи" | hfst-lookup cy2la.transliterater.hfst
 ```{bash}
 echo "БЕркулIи" | hfst-lookup cy2la.transliterater.hfst
 ```
+
+* перегенерация
+
+```
+берка<n><obl><sub><essive><elative>:berkutɬikku
+берка<n><obl><sub><essive><elative>:berkutɬikːu
+```
+
+
 
 * учет контекста
 
