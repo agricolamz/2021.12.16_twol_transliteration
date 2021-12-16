@@ -1,5 +1,5 @@
 ---
-title: "транслитерация, `twol`"
+title: "`twol`, транслитерация"
 author: "Г. Мороз, Н. Хауэлл"
 date: "16 декабря 2021"
 output: 
@@ -22,11 +22,14 @@ opts_chunk$set(comment = "", prompt = TRUE)
 make clean
 ```
 
-# Прошлые встречи
+# Наши встречи
 
-* 2021.11.08, [видео](https://youtu.be/oslfxrYjt_A)
-* 2021.12.02, [видео](https://youtu.be/3ULre3nuIhU), [материалы](https://agricolamz.github.io/2021.12.02_intro_to_linux_lexd_github_makefiles/)
-* 2021.12.09, [видео](https://youtu.be/8v6ajrlOGuA), [материалы](https://agricolamz.github.io/2021.12.09_gitignore_tests_githooks/)
+| дата       | тема                                   | материалы                                                                                  | видео                                 |
+|------------|----------------------------------------|--------------------------------------------------------------------------------------------|---------------------------------------|
+| 2021.11.08 | нахско-дагестанские языки, linux, lexd |                                                                                            | [видео](https://youtu.be/oslfxrYjt_A) |
+| 2021.12.02 | linux, lexd, github, makefiles         | [материалы](https://agricolamz.github.io/2021.12.02_intro_to_linux_lexd_github_makefiles/) | [видео](https://youtu.be/3ULre3nuIhU) |
+| 2021.12.09 | gitignore, tests, githooks             | [материалы](https://agricolamz.github.io/2021.12.09_gitignore_tests_githooks/)             | [видео](https://youtu.be/8v6ajrlOGuA) |
+| 2021.12.16 | `twol`, транслитерация видео           | [материалы](https://agricolamz.github.io/2021.12.16_twol_transliteration/)                 |                                       |
 
 # `twol`[^1]
 
