@@ -396,17 +396,71 @@ Storing rules.</code></pre>
 цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:цIцIонъакку
 цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:цIцIонъа
 цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:цIцIонъо</code></pre>
-<pre class="bash"><code>$ sed -n -e 1,12p -e 27,39p Makefile</code></pre>
+</div>
+<div id="изменения-в-морфотактике-или-элизия-в-twol2" class="section level2" number="2.2">
+<h2 number="2.2"><span class="header-section-number">2.2</span> Изменения в морфотактике, или элизия в <code>twol</code><a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a></h2>
+<p>С прошлого раза у нас осталась проблема, заключающаяся в том, что в формах элатива оставался тэг эссива:</p>
+<pre><code>берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:беркуъакку
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:беркулIикку</code></pre>
+<p>Хотелось бы тег <code>&lt;essive&gt;</code> удалить. Это тоже можно решить при помощи отдельного <code>.twol</code> файла, который будет разбираться с морфотактикой (файл называется <code>and.morphotactics.twol</code>):</p>
+<pre><code>Alphabet %&lt;essive%&gt; %&lt;essive%&gt;:0 %&lt;elative%&gt; ;
+
+Rules
+
+&quot;drop &lt;essive&gt; before &lt;elative&gt;&quot;
+%&lt;essive%&gt;:0 &lt;=&gt; _ %&lt;elative%&gt; ;</code></pre>
+<p>Мы его тоже можем скомпилировать в трансдьюсер</p>
+<pre class="bash"><code>$ hfst-twolc and.morphotactics.twol -o and.morphotactics.twol.hfst</code></pre>
+<pre><code>Reading input from and.morphotactics.twol.
+Writing output to and.morphotactics.twol.hfst.
+Reading alphabet.
+Reading rules and compiling their contexts and centers.
+Compiling rules.
+Storing rules.</code></pre>
+<pre class="bash"><code>$ hfst-invert and.lexd.hfst | hfst-compose-intersect - and.morphotactics.twol.hfst | hfst-invert -o and.morphotactics.hfst</code></pre>
+<pre><code>hfst-compose-intersect: warning: 
+Found output multi-char symbols (&quot;&lt;n&gt;&quot;) in 
+transducer in file - which are not found on the
+input tapes of transducers in file and.morphotactics.twol.hfst.</code></pre>
+<pre class="bash"><code>$ hfst-compose-intersect and.morphotactics.hfst and.twol.hfst -o and.generator.hfst</code></pre>
+<pre class="bash"><code>$ hfst-fst2strings and.generator.hfst</code></pre>
+<pre><code>берка&lt;n&gt;&lt;abs&gt;&lt;com&gt;:беркалой
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;:беркулIикку
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:беркулIи
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:беркулIи
+берка&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:беркуди
+берка&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:беркухъи
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;:беркуъакку
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:беркуъа
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:беркуъо
+цIцIон&lt;n&gt;&lt;abs&gt;&lt;com&gt;:цIцIонной
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;:цIцIонлIикку
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:цIцIонлIи
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:цIцIонлIи
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:цIцIонди
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:цIцIонхъи
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;:цIцIонъакку
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:цIцIонъа
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:цIцIонъо</code></pre>
+</div>
+<div id="makefile" class="section level2" number="2.3">
+<h2 number="2.3"><span class="header-section-number">2.3</span> <code>Makefile</code></h2>
+<p>Все пройденное можно соединить в одном <code>Makefile</code>:</p>
+<pre class="bash"><code>$ sed -n -e 1,16p -e 31,39p Makefile</code></pre>
 <pre><code>.DEFAULT_GOAL := and.analizer.hfst
 
 # generate analizer and generator
 and.analizer.hfst: and.generator.hfst
     hfst-invert $&lt; -o $@
-and.generator.hfst: and.lexd.hfst and.twol.hfst
+and.generator.hfst: and.morphotactics.hfst and.twol.hfst
     hfst-compose-intersect $^ -o $@
+and.morphotactics.hfst: and.lexd.hfst and.morphotactics.twol.hfst
+    hfst-invert $&lt; | hfst-compose-intersect - and.morphotactics.twol.hfst | hfst-invert -o $@
 and.lexd.hfst: and.lexd
     lexd $&lt; | hfst-txt2fst -o $@
 and.twol.hfst: and.twol
+    hfst-twolc $&lt; -o $@
+and.morphotactics.twol.hfst: and.morphotactics.twol
     hfst-twolc $&lt; -o $@
 
 # creat and apply tests
@@ -417,11 +471,7 @@ check: and.generator.hfst test.pass.txt
 
 # cleans files created during the check
 test.clean: check
-    rm test.*
-
-# remove all hfst files
-clean:
-    rm *.hfst</code></pre>
+    rm test.*</code></pre>
 </div>
 </div>
 <div id="транслитерация" class="section level1" number="3">
@@ -445,7 +495,7 @@ tsː:цIцI
 u:у
 ʔ:ъ</code></pre>
 <p>Мы его можем превратить в трансдьюссер <code>correspondence.hfst</code>:</p>
-<pre class="bash"><code>$ sed &#39;s/$$/  1/g&#39; correspondence | hfst-strings2fst -j -o correspondence.hfst</code></pre>
+<pre class="bash"><code>$ hfst-strings2fst -j correspondence -o correspondence.hfst</code></pre>
 <p>Пока мы можем его посмотреть, но он не отличается от нашего файла:</p>
 <pre class="bash"><code>$ hfst-fst2strings correspondence.hfst</code></pre>
 <pre><code>a:а
@@ -486,7 +536,7 @@ Using HFST basic transducer format and performing slow lookups
 
 &gt; </code></pre>
 <p>Чтобы построить транслитератор, нам нужно, чтобы наш трансдьюсер, применяя список соответствий, зациклился:</p>
-<pre class="bash"><code>$ sed &#39;s/$$/    1/g&#39; correspondence | hfst-strings2fst -j | hfst-repeat | hfst-concatenate correspondence.hfst - -o la2cy.transliterater.hfst</code></pre>
+<pre class="bash"><code>$ hfst-repeat -f 1 correspondence.hfst -o la2cy.transliterater.hfst</code></pre>
 <p>Теперь мы построили транслитератор <code>la2cy.transliterater.hfst</code>:</p>
 <pre class="bash"><code>$ echo &quot;berkutɬi&quot; | hfst-lookup la2cy.transliterater.hfst</code></pre>
 <pre><code>hfst-lookup: warning: It is not possible to perform fast lookups with OpenFST, std arc, tropical semiring format automata.
@@ -509,73 +559,77 @@ Using HFST basic transducer format and performing slow lookups
 <p>Что получилось:</p>
 <pre class="bash"><code>$ hfst-fst2strings and.generator.tr.hfst</code></pre>
 <pre><code>берка&lt;n&gt;&lt;abs&gt;&lt;com&gt;:berkaloj
-берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:berkutɬi
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;:berkutɬikku
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;:berkutɬikːu
 берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:berkutɬi
-берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:berkutɬikku
-берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:berkutɬikːu
+берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:berkutɬi
 берка&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:berkudi
 берка&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:berkuqχi
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;:berkuʔakku
+берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;:berkuʔakːu
 берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:berkuʔa
-берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:berkuʔakku
-берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:berkuʔakːu
 берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:berkuʔo
 цIцIон&lt;n&gt;&lt;abs&gt;&lt;com&gt;:tsːonnoj
-цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:tsːontɬi
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;:tsːontɬikku
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;:tsːontɬikːu
 цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;:tsːontɬi
-цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:tsːontɬikku
-цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;:tsːontɬikːu
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;:tsːontɬi
 цIцIон&lt;n&gt;&lt;obl&gt;&lt;erg&gt;:tsːondi
 цIцIон&lt;n&gt;&lt;obl&gt;&lt;ins&gt;:tsːonqχi
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;:tsːonʔakku
+цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;:tsːonʔakːu
 цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;:tsːonʔa
-цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:tsːonʔakku
-цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;:tsːonʔakːu
 цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;:tsːonʔo</code></pre>
 <p>Можем перевернуть и сделать анализатор:</p>
 <pre class="bash"><code>$ hfst-invert and.generator.tr.hfst -o and.analizer.tr.hfst</code></pre>
 <p>Результат:</p>
 <pre class="bash"><code>$ hfst-fst2strings and.analizer.tr.hfst</code></pre>
 <pre><code>berkaloj:берка&lt;n&gt;&lt;abs&gt;&lt;com&gt;
-berkutɬi:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;
+berkutɬikku:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;
+berkutɬikːu:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;
 berkutɬi:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;
-berkutɬikku:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;
-berkutɬikːu:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;
+berkutɬi:берка&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;
 berkudi:берка&lt;n&gt;&lt;obl&gt;&lt;erg&gt;
 berkuqχi:берка&lt;n&gt;&lt;obl&gt;&lt;ins&gt;
+berkuʔakku:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;
+berkuʔakːu:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;
 berkuʔa:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;
-berkuʔakku:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;
-berkuʔakːu:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;
 berkuʔo:берка&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;
 tsːonnoj:цIцIон&lt;n&gt;&lt;abs&gt;&lt;com&gt;
-tsːontɬi:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;
+tsːontɬikku:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;
+tsːontɬikːu:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;elative&gt;
 tsːontɬi:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;
-tsːontɬikku:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;
-tsːontɬikːu:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;essive&gt;&lt;elative&gt;
+tsːontɬi:цIцIон&lt;n&gt;&lt;obl&gt;&lt;sub&gt;&lt;lative&gt;
 tsːondi:цIцIон&lt;n&gt;&lt;obl&gt;&lt;erg&gt;
 tsːonqχi:цIцIон&lt;n&gt;&lt;obl&gt;&lt;ins&gt;
+tsːonʔakku:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;
+tsːonʔakːu:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;elative&gt;
 tsːonʔa:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;
-tsːonʔakku:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;
-tsːonʔakːu:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;essive&gt;&lt;elative&gt;
 tsːonʔo:цIцIон&lt;n&gt;&lt;obl&gt;&lt;super&gt;&lt;lative&gt;</code></pre>
-<p>Теперь можно суммировать все это в одном <code>Makefile</code>:</p>
+<p>Теперь можно суммировать все изученное в одном <code>Makefile</code>:</p>
 <pre><code>.DEFAULT_GOAL := and.analizer.hfst
 
 # generate analizer and generator
 and.analizer.hfst: and.generator.hfst
     hfst-invert $&lt; -o $@
-and.generator.hfst: and.lexd.hfst and.twol.hfst
+and.generator.hfst: and.morphotactics.hfst and.twol.hfst
     hfst-compose-intersect $^ -o $@
+and.morphotactics.hfst: and.lexd.hfst and.morphotactics.twol.hfst
+    hfst-invert $&lt; | hfst-compose-intersect - and.morphotactics.twol.hfst | hfst-invert -o $@
 and.lexd.hfst: and.lexd
     lexd $&lt; | hfst-txt2fst -o $@
 and.twol.hfst: and.twol
+    hfst-twolc $&lt; -o $@
+and.morphotactics.twol.hfst: and.morphotactics.twol
     hfst-twolc $&lt; -o $@
 
 # generate transliteraters
 cy2la.transliterater.hfst: la2cy.transliterater.hfst
     hfst-invert $&lt; -o $@
-la2cy.transliterater.hfst: correspondence correspondence.hfst
-    sed &#39;s/$$/  1/g&#39; $&lt; | hfst-strings2fst -j | hfst-repeat | hfst-concatenate correspondence.hfst - -o $@
+la2cy.transliterater.hfst: correspondence.hfst
+    hfst-repeat -f 1 $&lt; -o $@
 correspondence.hfst: correspondence
-    sed &#39;s/$$/  1/g&#39; $&lt; | hfst-strings2fst -j -o $@
+    hfst-strings2fst -j correspondence -o $@
 
 # generate analizer and generator for transcription
 and.analizer.tr.hfst: and.generator.tr.hfst
@@ -633,6 +687,7 @@ Using HFST basic transducer format and performing slow lookups
 <hr />
 <ol>
 <li id="fn1"><p>Весь этот раздел я бездумно списал из прошлогодних материалов Ника Хауэлла. Я старался списывать только то, что я понял…<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+<li id="fn2"><p>Ник в последний момент пришел и помог с этой частью. Ура!<a href="#fnref2" class="footnote-back">↩︎</a></p></li>
 </ol>
 </div>
 

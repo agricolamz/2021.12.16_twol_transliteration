@@ -10,6 +10,7 @@ output:
     toc_float: yes
     number_sections: true
     df_print: paged
+    keep_md: true
 ---
 
 ```{r setup, include=FALSE}
@@ -89,8 +90,44 @@ hfst-compose-intersect and.lexd.hfst and.twol.hfst -o and.generator.hfst
 hfst-fst2strings and.generator.hfst
 ```
 
+## Изменения в морфотактике, или элизия в `twol`[^2]
+
+[^2]: Ник в последний момент пришел и помог с этой частью. Ура!
+
+С прошлого раза у нас осталась проблема, заключающаяся в том, что в формах элатива оставался тэг эссива:
+
+```
+берка<n><obl><super><essive><elative>:беркуъакку
+берка<n><obl><sub><essive><elative>:беркулIикку
+```
+
+Хотелось бы тег `<essive>` удалить. Это тоже можно решить при помощи отдельного `.twol` файла, который будет разбираться с морфотактикой (файл называется `and.morphotactics.twol`):
+
+```{bash, echo = FALSE}
+cat and.morphotactics.twol
+```
+
+Мы его тоже можем скомпилировать в трансдьюсер 
+
 ```{bash}
-sed -n -e 1,12p -e 27,39p Makefile
+hfst-twolc and.morphotactics.twol -o and.morphotactics.twol.hfst
+```
+```{bash}
+hfst-invert and.lexd.hfst | hfst-compose-intersect - and.morphotactics.twol.hfst | hfst-invert -o and.morphotactics.hfst
+```
+```{bash}
+hfst-compose-intersect and.morphotactics.hfst and.twol.hfst -o and.generator.hfst
+```
+```{bash}
+hfst-fst2strings and.generator.hfst
+```
+
+## `Makefile`
+
+Все пройденное можно соединить в одном `Makefile`:
+
+```{bash}
+sed -n -e 1,16p -e 31,39p Makefile
 ```
 
 # Транслитерация
@@ -104,7 +141,7 @@ cat correspondence
 Мы его можем превратить в трансдьюссер `correspondence.hfst`:
 
 ```{bash}
-sed 's/$$/  1/g' correspondence | hfst-strings2fst -j -o correspondence.hfst
+hfst-strings2fst -j correspondence -o correspondence.hfst
 ```
 
 Пока мы можем его посмотреть, но он не отличается от нашего файла:
@@ -131,7 +168,7 @@ echo "berka" | hfst-lookup correspondence.hfst
 Чтобы построить транслитератор, нам нужно, чтобы наш трансдьюсер, применяя список соответствий, зациклился:
 
 ```{bash}
-sed 's/$$/	1/g' correspondence | hfst-strings2fst -j | hfst-repeat | hfst-concatenate correspondence.hfst - -o la2cy.transliterater.hfst
+hfst-repeat -f 1 correspondence.hfst -o la2cy.transliterater.hfst
 ```
 
 Теперь мы построили транслитератор `la2cy.transliterater.hfst`:
@@ -178,12 +215,11 @@ hfst-invert and.generator.tr.hfst -o and.analizer.tr.hfst
 hfst-fst2strings and.analizer.tr.hfst
 ```
 
-Теперь можно суммировать все это в одном `Makefile`:
+Теперь можно суммировать все изученное в одном `Makefile`:
 
 ```{bash, echo = FALSE}
 cat Makefile
 ```
-
 
 ## Сложности
 
